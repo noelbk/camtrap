@@ -1,0 +1,9 @@
+#! /bin/bash
+#
+# disable the screensaver, start camtrap.py, then and immediately lock the screen when the trap exits
+
+cd $(dirname $0)
+(while true; do xscreensaver-command -deactivate >&- 2>&-; sleep 4; done) &
+./camtrap.py
+kill %-
+xscreensaver-command -activate
