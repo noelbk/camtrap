@@ -1,0 +1,36 @@
+#! /bin/bash
+# USAGE: memify out.gif top_text bottom_text images...
+#
+# convert a bunch of images into an animated gif with top and bottom
+# caption. Images may be a single video file
+#
+# requires: ImageMagick, avconv
+#
+set -eu
+
+out="$1"
+text1="$2"
+text2="$3"
+shift 3
+
+
+if [ "$#" -eq 1 ] && file -b -i "$1" | grep -q '^video/'; then
+    tmpdir="$(mktemp -d)"
+    trap 'rm -rf "$tmpdir"' EXIT
+    avconv -v quiet -i "$1" -vf scale=320:240:flags=lanczos,fps=5 "$tmpdir"/%03d.png
+    files=("$tmpdir"/*.png)
+    set -- "${files[@]}"
+fi
+
+for img in "$@"; do
+    args+=( \( "$img" \
+	       -font Impact -pointsize 42 \
+	       -fill yellow -stroke black -strokewidth 1 \
+	       -gravity north -draw 'text 0,0 "'"$text1"'"' \
+	       -gravity south -draw 'text 0,0 "'"$text2"'"' \
+	       \) )
+done
+args+=(-set delay 10 -layers Optimize)
+convert $img "${args[@]}" "$out"
+
+
