@@ -1,4 +1,6 @@
 #! /usr/bin/env python
+#
+# camtrap.py - 
 
 import os
 import datetime
@@ -7,9 +9,11 @@ import random
 import sys
 from PyQt4 import QtGui, QtCore
 from PyQt4.phonon import Phonon
-import cv
+import cv2
+import numpy
 
 class CamTrapWindow(QtGui.QMainWindow):
+    
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
         self.setWindowFlags(
@@ -26,8 +30,6 @@ class CamTrapWindow(QtGui.QMainWindow):
         self.capture_height=480
         self.labels = []
         self.pix = None
-        
-        #self.audio = Phonon.AudioOutput(Phonon.MusicCategory, self)
         
         self.alarms = []
         for (dirpath, dirnames, filenames) in os.walk("assets/alarms"):
@@ -51,10 +53,29 @@ class CamTrapWindow(QtGui.QMainWindow):
                 raise
         print "saving captures to %s" % self.caught_dir
 
+        # clear the screen after 30 seconds
         self.clear_timer = QtCore.QTimer()
+        self.clear_timer.setInterval(30 * 1000)
+        self.clear_timer.setSingleShot(True)
         self.clear_timer.timeout.connect(self.clear)
 
+        # record video at 10 fps
+        self.capture_fourcc = cv2.cv.CV_FOURCC(*'XVID')
+        self.capture_fps = 10
+        self.camera = None
+        self.writer = None
+        self.capture_frame_timer = QtCore.QTimer(self)
+        self.capture_frame_timer.setInterval(1000/self.capture_fps)
+        self.capture_frame_timer.timeout.connect(self.capture_frame_timer_handler)
+
+        # stop recording after 10 seconds
+        self.capture_stop_timer = QtCore.QTimer(self)
+        self.capture_stop_timer.setInterval(10 * 1000)
+        self.capture_stop_timer.setSingleShot(True)
+        self.capture_stop_timer.timeout.connect(self.capture_stop_timer_handler)
+
     def clear(self):
+        self.clear_timer.stop()
         for label in self.labels:
             label.clear()
         
@@ -77,34 +98,76 @@ class CamTrapWindow(QtGui.QMainWindow):
     def mousePressEvent(self, event):
         self.capture()
 
+    def quit(self):
+        self.capture_stop()
+        QtGui.qApp.quit()
+
     def keyPressEvent(self, event):
         if event.nativeScanCode() in (50 # left-shift
                                       ,62 # right-shift
                                       ,64 # left-alt
                                       ):
-            QtGui.qApp.quit()
+            self.quit()
         else:
             self.capture()
 
     def capture(self):
         try:
-            #self.audio.setMuted(False)
-            #self.audio.setVolume(0.8)
             random.choice(self.alarms).play()
         except Exception as e:
             print "WARNING: couldn't play alarm: %s" % e
 
-        try:
-            cap = cv.CaptureFromCAM(-1)
-            cv.SetCaptureProperty(cap, cv.CV_CAP_PROP_FRAME_WIDTH, self.capture_width)
-            cv.SetCaptureProperty(cap, cv.CV_CAP_PROP_FRAME_HEIGHT, self.capture_height)
-            frame = cv.QueryFrame(cap)
-            im = QtGui.QImage(frame.tostring(), frame.width, frame.height, QtGui.QImage.Format_RGB888).rgbSwapped()
-            pix = QtGui.QPixmap(im)
+        self.capture_start()
+        
+    def capture_start(self):  
+        self.capture_stop_timer.start()
+        self.clear_timer.start()
+        
+        if not self.camera:
+            try:
+                self.camera = cv2.VideoCapture(0)
+                if not self.camera.isOpened():
+                    self.camera.open()
+                self.camera.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, self.capture_width)
+                self.camera.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, self.capture_height)
 
-            # save pix
-            stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S.%f")
-            pix.save(os.path.join(self.caught_dir, stamp) + ".png")
+                stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S.%f")
+                self.writer = cv2.VideoWriter(os.path.join(self.caught_dir, stamp) + ".avi",
+                                              self.capture_fourcc,
+                                              self.capture_fps,
+                                              (self.capture_width, self.capture_height))
+                
+                self.capture_frame_timer.start()
+                self.capture_frame_timer_handler()
+            except Exception as e:
+                print "WARNING: couldn't capture video: %s" % e
+                self.capture_stop()
+
+    def capture_stop_timer_handler(self, event=None):
+        self.capture_stop()
+        
+    def capture_stop(self):
+        self.capture_frame_timer.stop()
+        if self.camera:
+            self.camera.release()
+            self.camera = None
+        if self.writer:
+            self.writer.release()
+            self.writer = None
+        
+    def capture_frame_timer_handler(self, event=None):
+        ret, frame = self.camera.read()
+        if not ret:
+            return
+
+        try:
+            self.writer.write(frame)
+            
+            height, width, byteValue = frame.shape
+            byteValue = byteValue * width
+            cv2.cvtColor(frame, cv2.COLOR_BGR2RGB, frame)
+            image = QtGui.QImage(frame, width, height, byteValue, QtGui.QImage.Format_RGB888)
+            pix = QtGui.QPixmap(image)
 
             # add caption
             painter = QtGui.QPainter(pix)
@@ -120,10 +183,10 @@ class CamTrapWindow(QtGui.QMainWindow):
             for label in self.labels:
                 label.setPixmap(self.pix)
 
-            self.clear_timer.start(600 * 1000)
+            self.clear_timer.start()
 
         except Exception as e:
-            print "WARNING: couldn't capture video: %s" % e
+            print "WARNING: couldn't save video: %s" % e
 
 app = QtGui.QApplication(sys.argv)
 w = CamTrapWindow()
