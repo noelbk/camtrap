@@ -103,10 +103,7 @@ class CamTrapWindow(QtGui.QMainWindow):
         QtGui.qApp.quit()
 
     def keyPressEvent(self, event):
-        if event.nativeScanCode() in (50 # left-shift
-                                      ,62 # right-shift
-                                      ,64 # left-alt
-                                      ):
+        if event.key() in (QtCore.Qt.Key_Control, QtCore.Qt.Key_Alt):
             self.quit()
         else:
             self.capture()
