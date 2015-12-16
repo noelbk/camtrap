@@ -11,6 +11,7 @@ from PyQt4 import QtGui, QtCore
 from PyQt4.phonon import Phonon
 import cv2
 import numpy
+import captions
 
 class CamTrapWindow(QtGui.QMainWindow):
     
@@ -74,6 +75,10 @@ class CamTrapWindow(QtGui.QMainWindow):
         self.capture_stop_timer.setSingleShot(True)
         self.capture_stop_timer.timeout.connect(self.capture_stop_timer_handler)
 
+        # load captions
+        self.captions = captions.load_captions()
+        self.caption_top, self.caption_bottom = captions.choose(self.captions)
+
     def clear(self):
         self.clear_timer.stop()
         for label in self.labels:
@@ -114,6 +119,8 @@ class CamTrapWindow(QtGui.QMainWindow):
         except Exception as e:
             print "WARNING: couldn't play alarm: %s" % e
 
+        self.captions = captions.load_captions()
+        self.caption_top, self.caption_bottom = captions.choose(self.captions)
         self.capture_start()
         
     def capture_start(self):  
@@ -165,6 +172,7 @@ class CamTrapWindow(QtGui.QMainWindow):
             cv2.cvtColor(frame, cv2.COLOR_BGR2RGB, frame)
             image = QtGui.QImage(frame, width, height, byteValue, QtGui.QImage.Format_RGB888)
             pix = QtGui.QPixmap(image)
+            self.pix = pix
 
             # add caption
             painter = QtGui.QPainter(pix)
@@ -172,11 +180,10 @@ class CamTrapWindow(QtGui.QMainWindow):
             painter.setPen(QtGui.QColor('yellow'))
             painter.setBrush(QtGui.QColor('yellow'))
             rect = QtCore.QRect(0, 0, self.capture_width, self.capture_height)
-            painter.drawText(rect, QtCore.Qt.AlignTop + QtCore.Qt.AlignHCenter, "Dude...")
-            painter.drawText(rect, QtCore.Qt.AlignBottom + QtCore.Qt.AlignHCenter, "Hands Off!")
+            painter.drawText(rect, QtCore.Qt.AlignTop + QtCore.Qt.AlignHCenter, self.caption_top)
+            painter.drawText(rect, QtCore.Qt.AlignBottom + QtCore.Qt.AlignHCenter, self.caption_bottom)
             painter.end()
             
-            self.pix = pix
             for label in self.labels:
                 label.setPixmap(self.pix)
 
