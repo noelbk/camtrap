@@ -172,8 +172,8 @@ class CamTrapWindow(QtGui.QMainWindow):
             painter.setPen(QtGui.QColor('yellow'))
             painter.setBrush(QtGui.QColor('yellow'))
             rect = QtCore.QRect(0, 0, self.capture_width, self.capture_height)
-            painter.drawText(rect, QtCore.Qt.AlignTop + QtCore.Qt.AlignHCenter, "Yo! Hands Off")
-            painter.drawText(rect, QtCore.Qt.AlignBottom + QtCore.Qt.AlignHCenter, "My Junk!")
+            painter.drawText(rect, QtCore.Qt.AlignTop + QtCore.Qt.AlignHCenter, "Dude...")
+            painter.drawText(rect, QtCore.Qt.AlignBottom + QtCore.Qt.AlignHCenter, "Hands Off!")
             painter.end()
             
             self.pix = pix
