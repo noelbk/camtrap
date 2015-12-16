@@ -18,6 +18,15 @@ exits.
 
 .. _locktrap: locktrap
 
+Check out memeify_ to convert an avi to an animated gif::
+
+  ./memeify noel.gif "Dude..."  "Hands Off!" caught/20151215-172204.617244.avi
+
+.. image:: noel.gif
+.. _memeify: memeify
+
+
+
 Author
 ------
 2015-12-16 Noel Burton-Krahn <noel@burton-krahn.com>
