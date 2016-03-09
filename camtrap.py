@@ -108,7 +108,7 @@ class CamTrapWindow(QtGui.QMainWindow):
         QtGui.qApp.quit()
 
     def keyPressEvent(self, event):
-        if event.key() in (QtCore.Qt.Key_Control, QtCore.Qt.Key_Alt):
+        if event.key() in (QtCore.Qt.Key_Control,):
             self.quit()
         else:
             self.capture()
