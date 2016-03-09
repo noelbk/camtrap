@@ -17,11 +17,13 @@ shift 3
 if [ "$#" -eq 1 ] && file -b -i "$1" | grep -q '^video/'; then
     tmpdir="$(mktemp -d)"
     trap 'rm -rf "$tmpdir"' EXIT
-    avconv -v quiet -i "$1" -vf scale=320:240:flags=lanczos,fps=5 "$tmpdir"/%03d.png
+    #avconv -v quiet -i "$1" -vf scale=320:240:flags=lanczos,fps=5 "$tmpdir"/%03d.png
+    ffmpeg -v quiet -i "$1" -vf scale=320:240:flags=lanczos,fps=5 "$tmpdir"/%03d.png
     files=("$tmpdir"/*.png)
     set -- "${files[@]}"
 fi
 
+args=()
 for img in "$@"; do
     args+=( \( "$img" \
 	       -font Impact -pointsize 42 \
